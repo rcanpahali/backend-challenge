@@ -31,13 +31,13 @@ export class WorkflowFactory {
    * Creates a workflow by reading a YAML file and constructing the Workflow and Task entities.
    * @param filePath - Path to the YAML file.
    * @param clientId - Client identifier for the workflow.
-   * @param geoJson - The geoJson data string for tasks (customize as needed).
+   * @param payload - The serialized JSON payload string for tasks.
    * @returns A promise that resolves to the created Workflow.
    */
   async createWorkflowFromYAML(
     filePath: string,
     clientId: string,
-    geoJson: string
+    payload: string
   ): Promise<Workflow> {
     const fileContent = fs.readFileSync(filePath, "utf8");
     const workflowDef = WorkflowDefinitionSchema.parse(yaml.load(fileContent));
@@ -53,7 +53,7 @@ export class WorkflowFactory {
     const tasks: Task[] = workflowDef.steps.map(step => {
       const task = new Task();
       task.clientId = clientId;
-      task.geoJson = geoJson;
+      task.payload = payload;
       task.status = TaskStatus.Queued;
       task.taskType = step.taskType;
       task.stepNumber = step.stepNumber;

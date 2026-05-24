@@ -9,7 +9,8 @@ export class DataAnalysisJob implements Job {
   run(task: Task): Promise<string> {
     logger.info({ taskId: task.taskId }, "Running data analysis");
 
-    const inputGeometry = JSON.parse(task.geoJson) as Feature<Polygon>;
+    const { geoJson } = JSON.parse(task.payload) as { geoJson: Feature<Polygon> };
+    const inputGeometry = geoJson;
 
     for (const countryFeature of countryMapping.features) {
       if (

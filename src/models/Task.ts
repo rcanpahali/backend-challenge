@@ -18,7 +18,7 @@ export class Task {
   clientId!: string;
 
   @Column("text")
-  geoJson!: string;
+  payload!: string;
 
   @Column({ type: "text" })
   status!: TaskStatus;

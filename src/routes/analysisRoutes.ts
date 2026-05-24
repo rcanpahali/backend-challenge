@@ -27,7 +27,7 @@ router.post("/", async (req, res) => {
     const workflow = await workflowFactory.createWorkflowFromYAML(
       workflowFile,
       clientId,
-      JSON.stringify(geoJson)
+      JSON.stringify({ geoJson })
     );
 
     res.status(202).json({

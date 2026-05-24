@@ -96,7 +96,7 @@ describe("TaskRunner", () => {
     const workflow = await factory.createWorkflowFromYAML(
       workflowYaml,
       "client-runner",
-      JSON.stringify(VALID_GEO_JSON)
+      JSON.stringify({ geoJson: VALID_GEO_JSON })
     );
 
     const taskRepo = AppDataSource.getRepository(Task);
