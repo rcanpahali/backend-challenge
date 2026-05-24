@@ -13,6 +13,6 @@
     "rootDir": "./src", // Root directory of input files
     "forceConsistentCasingInFileNames": true // Ensures consistent casing in file names
   },
-  "include": ["src"],
+  "include": ["src", "vitest.config.ts"],
   "exclude": ["node_modules", "dist"]
 }

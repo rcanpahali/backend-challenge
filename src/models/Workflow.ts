@@ -17,7 +17,7 @@ export class Workflow {
   @Column()
   clientId!: string;
 
-  @Column({ default: WorkflowStatus.Initial })
+  @Column({ type: "text", default: WorkflowStatus.Initial })
   status!: WorkflowStatus;
 
   @OneToMany(() => Task, task => task.workflow)

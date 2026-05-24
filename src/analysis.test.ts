@@ -1,0 +1,134 @@
+import "reflect-metadata";
+import http from "http";
+import path from "path";
+import { describe, it, expect, beforeAll, afterAll } from "vitest";
+import { setupExpressTestApp } from "./test/app";
+import { AppDataSource } from "./data-source";
+import { Workflow } from "./models/Workflow";
+import { Task } from "./models/Task";
+import { WorkflowStatus, WorkflowFactory } from "./workflows/WorkflowFactory";
+import { TaskStatus, TaskRunner } from "./workers/taskRunner";
+import { Result } from "./models/Result";
+
+// Brazil polygon from the README example
+const VALID_GEO_JSON = {
+  type: "Polygon",
+  coordinates: [
+    [
+      [-63.624885020050996, -10.311050368263523],
+      [-63.624885020050996, -10.367865108370523],
+      [-63.61278302732815, -10.367865108370523],
+      [-63.61278302732815, -10.311050368263523],
+      [-63.624885020050996, -10.311050368263523]
+    ]
+  ]
+};
+
+describe("POST /analysis", () => {
+  let server: http.Server;
+  let baseUrl: string;
+
+  beforeAll(() => {
+    const app = setupExpressTestApp();
+    server = app.listen(0); // 0 = random available port
+    const addr = server.address() as { port: number };
+    baseUrl = `http://localhost:${addr.port}`;
+  });
+
+  afterAll(() => {
+    server.close();
+  });
+
+  it("returns 202 with a workflowId on a valid payload", async () => {
+    const res = await fetch(`${baseUrl}/analysis`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId: "client-happy-path", geoJson: VALID_GEO_JSON })
+    });
+
+    expect(res.status).toBe(202);
+
+    const body = (await res.json()) as { workflowId: string; message: string };
+    expect(typeof body.workflowId).toBe("string");
+    expect(body.workflowId.length).toBeGreaterThan(0);
+    expect(body.message).toBeDefined();
+  });
+
+  it("returns 400 when clientId is missing", async () => {
+    const res = await fetch(`${baseUrl}/analysis`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ geoJson: VALID_GEO_JSON })
+    });
+
+    expect(res.status).toBe(400);
+  });
+
+  it("persists the workflow and tasks with the correct initial statuses", async () => {
+    const res = await fetch(`${baseUrl}/analysis`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId: "client-db-check", geoJson: VALID_GEO_JSON })
+    });
+
+    expect(res.status).toBe(202);
+    const { workflowId } = (await res.json()) as { workflowId: string };
+
+    const workflowRepo = AppDataSource.getRepository(Workflow);
+    const workflow = await workflowRepo.findOne({
+      where: { workflowId },
+      relations: { tasks: true }
+    });
+
+    expect(workflow).not.toBeNull();
+    expect(workflow!.status).toBe(WorkflowStatus.Initial);
+    // example_workflow.yml defines 2 steps: analysis + notification
+    expect(workflow!.tasks).toHaveLength(2);
+    expect(workflow!.tasks.every(t => t.status === TaskStatus.Queued)).toBe(true);
+  });
+});
+
+describe("TaskRunner", () => {
+  it("runs all tasks and marks the workflow completed", async () => {
+    const factory = new WorkflowFactory(AppDataSource);
+    const workflowYaml = path.join(__dirname, "workflows/example_workflow.yml");
+
+    const workflow = await factory.createWorkflowFromYAML(
+      workflowYaml,
+      "client-runner",
+      JSON.stringify(VALID_GEO_JSON)
+    );
+
+    const taskRepo = AppDataSource.getRepository(Task);
+    const tasks = await taskRepo.find({
+      where: { workflow: { workflowId: workflow.workflowId } },
+      relations: { workflow: true },
+      order: { stepNumber: "ASC" }
+    });
+
+    expect(tasks).toHaveLength(2);
+
+    const runner = new TaskRunner(taskRepo);
+    for (const task of tasks) {
+      await runner.run(task);
+    }
+
+    // All tasks should be completed with a Result saved
+    const resultRepo = AppDataSource.getRepository(Result);
+    for (const task of tasks) {
+      const result = await resultRepo.findOneBy({ taskId: task.taskId });
+      expect(result).not.toBeNull();
+      expect(result!.data).toBeDefined();
+    }
+
+    // Workflow should now be completed
+    const workflowRepo = AppDataSource.getRepository(Workflow);
+    const finalWorkflow = await workflowRepo.findOne({
+      where: { workflowId: workflow.workflowId },
+      relations: { tasks: true }
+    });
+
+    expect(finalWorkflow!.status).toBe(WorkflowStatus.Completed);
+    expect(finalWorkflow!.tasks.every(t => t.status === TaskStatus.Completed)).toBe(true);
+  });
+});

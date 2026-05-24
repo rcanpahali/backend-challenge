@@ -1,9 +1,16 @@
-import { defineConfig } from 'vitest/config';
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    environment: 'node',
+    environment: "node",
     globals: true,
-    include: ['src/**/*.{test,spec}.ts']
+    include: ["src/**/*.{test,spec}.ts"],
+    setupFiles: ["src/test/setup.ts"],
+    env: {
+      NODE_ENV: "test",
+      DB_PATH: ":memory:", // use in-memory SQLite for tests
+      DB_DROP_SCHEMA: "false",
+      LOG_LEVEL: "error"
+    }
   }
 });
