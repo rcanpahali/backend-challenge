@@ -1,6 +1,7 @@
 import "reflect-metadata";
 import express from "express";
 import { config } from "./config";
+import logger from "./logger";
 import analysisRoutes from "./routes/analysisRoutes";
 import defaultRoute from "./routes/defaultRoute";
 import { taskWorker } from "./workers/taskWorker";
@@ -16,7 +17,7 @@ void AppDataSource.initialize()
     void taskWorker();
 
     app.listen(config.PORT, () => {
-      console.log(`Server is running at http://localhost:${config.PORT}`);
+      logger.info(`Server is running at http://localhost:${config.PORT}`);
     });
   })
-  .catch(error => console.log(error));
+  .catch(error => logger.error(error, "Failed to initialize database"));

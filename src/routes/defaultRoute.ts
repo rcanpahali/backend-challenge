@@ -2,6 +2,7 @@ import express from "express";
 import fs from "fs/promises";
 import path from "path";
 import { marked } from "marked";
+import logger from "../logger";
 
 const router = express.Router();
 const staticPath = path.join(__dirname, "../../public");
@@ -74,7 +75,7 @@ router.get("/", async (_req, res) => {
     res.setHeader("Content-Type", "text/html");
     res.send(styledHtml);
   } catch (err: unknown) {
-    console.error("Error reading README.md:", err);
+    logger.error({ err }, "Error reading README.md");
     res.status(500).send("Error loading README.md");
   }
 });

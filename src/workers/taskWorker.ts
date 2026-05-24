@@ -2,6 +2,7 @@ import { AppDataSource } from "../data-source";
 import { Task } from "../models/Task";
 import { TaskRunner, TaskStatus } from "./taskRunner";
 import { config } from "../config";
+import logger from "../logger";
 
 export async function taskWorker() {
   const taskRepository = AppDataSource.getRepository(Task);
@@ -19,8 +20,7 @@ export async function taskWorker() {
       try {
         await taskRunner.run(task);
       } catch (error) {
-        console.error("Task execution failed. Task status has already been updated by TaskRunner.");
-        console.error(error);
+        logger.error({ err: error }, "Task execution failed; status already updated by TaskRunner");
       }
     }
 

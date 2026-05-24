@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { AppDataSource } from "../data-source";
 import { WorkflowFactory } from "../workflows/WorkflowFactory"; // Create a folder for factories if you prefer
+import logger from "../logger";
 import path from "path";
 
 const router = Router();
@@ -22,7 +23,7 @@ router.post("/", async (req, res) => {
       message: "Workflow created and tasks queued from YAML definition."
     });
   } catch (error: unknown) {
-    console.error("Error creating workflow:", error);
+    logger.error({ err: error }, "Error creating workflow");
     res.status(500).json({ message: "Failed to create workflow" });
   }
 });

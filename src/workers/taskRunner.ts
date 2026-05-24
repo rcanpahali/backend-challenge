@@ -4,6 +4,7 @@ import { getJobForTaskType } from "../jobs/JobFactory";
 import { WorkflowStatus } from "../workflows/WorkflowFactory";
 import { Workflow } from "../models/Workflow";
 import { Result } from "../models/Result";
+import logger from "../logger";
 
 export enum TaskStatus {
   Queued = "queued",
@@ -27,10 +28,10 @@ export class TaskRunner {
     const job = getJobForTaskType(task.taskType);
 
     try {
-      console.log(`Starting job ${task.taskType} for task ${task.taskId}...`);
+      logger.info({ taskId: task.taskId, taskType: task.taskType }, "Starting job");
       const resultRepository = this.taskRepository.manager.getRepository(Result);
       const taskResult = await job.run(task);
-      console.log(`Job ${task.taskType} for task ${task.taskId} completed successfully.`);
+      logger.info({ taskId: task.taskId, taskType: task.taskType }, "Job completed successfully");
       const result = new Result();
       result.taskId = task.taskId!;
       result.data = JSON.stringify(taskResult || {});
@@ -40,7 +41,7 @@ export class TaskRunner {
       task.progress = null;
       await this.taskRepository.save(task);
     } catch (error: unknown) {
-      console.error(`Error running job ${task.taskType} for task ${task.taskId}:`, error);
+      logger.error({ taskId: task.taskId, taskType: task.taskType, err: error }, "Job failed");
 
       task.status = TaskStatus.Failed;
       task.progress = null;

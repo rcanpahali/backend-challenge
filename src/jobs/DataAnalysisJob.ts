@@ -3,10 +3,11 @@ import { Task } from "../models/Task";
 import booleanWithin from "@turf/boolean-within";
 import { Feature, Polygon } from "geojson";
 import countryMapping from "../data/world_data.json";
+import logger from "../logger";
 
 export class DataAnalysisJob implements Job {
   run(task: Task): Promise<string> {
-    console.log(`Running data analysis for task ${task.taskId}...`);
+    logger.info({ taskId: task.taskId }, "Running data analysis");
 
     const inputGeometry = JSON.parse(task.geoJson) as Feature<Polygon>;
 
@@ -17,7 +18,10 @@ export class DataAnalysisJob implements Job {
       ) {
         const isWithin = booleanWithin(inputGeometry, countryFeature as Feature<Polygon>);
         if (isWithin) {
-          console.log(`The polygon is within ${countryFeature.properties?.name}`);
+          logger.debug(
+            { taskId: task.taskId, country: countryFeature.properties?.name },
+            "Polygon matched country"
+          );
           return Promise.resolve(countryFeature.properties?.name ?? "No country found");
         }
       }
