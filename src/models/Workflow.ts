@@ -1,4 +1,11 @@
-import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from "typeorm";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  OneToMany,
+  CreateDateColumn,
+  UpdateDateColumn
+} from "typeorm";
 import { Task } from "./Task";
 import { WorkflowStatus } from "../workflows/WorkflowFactory";
 
@@ -15,4 +22,10 @@ export class Workflow {
 
   @OneToMany(() => Task, task => task.workflow)
   tasks!: Task[];
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
 }

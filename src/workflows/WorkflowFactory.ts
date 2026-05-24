@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as yaml from "js-yaml";
+import { z } from "zod";
 import { DataSource } from "typeorm";
 import { Workflow } from "../models/Workflow";
 import { Task } from "../models/Task";
@@ -12,15 +13,16 @@ export enum WorkflowStatus {
   Failed = "failed"
 }
 
-interface WorkflowStep {
-  taskType: string;
-  stepNumber: number;
-}
+// yaml.load() returns `unknown`. Zod validates the actual shape before we use it, otherwise it silently fails on invalid input.
+const WorkflowStepSchema = z.object({
+  taskType: z.string(),
+  stepNumber: z.number()
+});
 
-interface WorkflowDefinition {
-  name: string;
-  steps: WorkflowStep[];
-}
+const WorkflowDefinitionSchema = z.object({
+  name: z.string(),
+  steps: z.array(WorkflowStepSchema)
+});
 
 export class WorkflowFactory {
   constructor(private dataSource: DataSource) {}
@@ -38,7 +40,7 @@ export class WorkflowFactory {
     geoJson: string
   ): Promise<Workflow> {
     const fileContent = fs.readFileSync(filePath, "utf8");
-    const workflowDef = yaml.load(fileContent) as WorkflowDefinition;
+    const workflowDef = WorkflowDefinitionSchema.parse(yaml.load(fileContent));
     const workflowRepository = this.dataSource.getRepository(Workflow);
     const taskRepository = this.dataSource.getRepository(Task);
     const workflow = new Workflow();

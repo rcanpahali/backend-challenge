@@ -1,14 +1,26 @@
 import { Router } from "express";
+import { z } from "zod";
 import { AppDataSource } from "../data-source";
-import { WorkflowFactory } from "../workflows/WorkflowFactory"; // Create a folder for factories if you prefer
+import { WorkflowFactory } from "../workflows/WorkflowFactory";
 import logger from "../logger";
 import path from "path";
 
 const router = Router();
 const workflowFactory = new WorkflowFactory(AppDataSource);
 
+const AnalysisRequestSchema = z.object({
+  clientId: z.string().min(1),
+  geoJson: z.record(z.string(), z.unknown())
+});
+
 router.post("/", async (req, res) => {
-  const { clientId, geoJson } = req.body as { clientId: string; geoJson: unknown };
+  const parsed = AnalysisRequestSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ message: "Invalid request body", errors: parsed.error.issues });
+    return;
+  }
+
+  const { clientId, geoJson } = parsed.data;
   const workflowFile = path.join(__dirname, "../workflows/example_workflow.yml");
 
   try {
