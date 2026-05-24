@@ -52,7 +52,9 @@ export class TaskRunner {
     const workflowRepository = this.taskRepository.manager.getRepository(Workflow);
     const currentWorkflow = await workflowRepository.findOne({
       where: { workflowId: task.workflow.workflowId },
-      relations: ["tasks"]
+      relations: {
+        tasks: true
+      }
     });
 
     if (currentWorkflow) {
