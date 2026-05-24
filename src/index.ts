@@ -1,5 +1,6 @@
 import "reflect-metadata";
 import express from "express";
+import { config } from "./config";
 import analysisRoutes from "./routes/analysisRoutes";
 import defaultRoute from "./routes/defaultRoute";
 import { taskWorker } from "./workers/taskWorker";
@@ -10,13 +11,12 @@ app.use(express.json());
 app.use("/analysis", analysisRoutes);
 app.use("/", defaultRoute);
 
-AppDataSource.initialize()
+void AppDataSource.initialize()
   .then(() => {
-    // Start the worker after successful DB connection
-    taskWorker();
+    void taskWorker();
 
-    app.listen(3000, () => {
-      console.log("Server is running at http://localhost:3000");
+    app.listen(config.PORT, () => {
+      console.log(`Server is running at http://localhost:${config.PORT}`);
     });
   })
-  .catch((error) => console.log(error));
+  .catch(error => console.log(error));
