@@ -1,6 +1,6 @@
 import "reflect-metadata";
 import express from "express";
-import analysisRoutes from "../routes/analysisRoutes";
+import analysisRoutes from "../../src/routes/analysisRoutes";
 
 // creates the Express app without starting the DB or the background worker.
 export function setupExpressTestApp() {

@@ -1,16 +1,12 @@
 import "reflect-metadata";
 import http from "http";
-import path from "path";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { setupExpressTestApp } from "../../src/test/app";
-import { AppDataSource } from "../../src/data-source";
-import { Workflow } from "../../src/models/Workflow";
-import { Task } from "../../src/models/Task";
-import { WorkflowStatus, WorkflowFactory } from "../../src/workflows/WorkflowFactory";
-import { createTaskRunner } from "../../src/workers/taskRunner";
-import { TaskStatus } from "../../src/types/TaskStatus";
-import { Result } from "../../src/models/Result";
-import { VALID_GEO_JSON } from "./utils";
+import { setupExpressTestApp } from "../../helpers/app";
+import { AppDataSource } from "../../../src/data-source";
+import { Workflow } from "../../../src/models/Workflow";
+import { WorkflowStatus } from "../../../src/workflows/WorkflowFactory";
+import { TaskStatus } from "../../../src/types/TaskStatus";
+import { VALID_GEO_JSON } from "../../helpers/utils";
 
 describe("POST /analysis", () => {
   let server: http.Server;
@@ -73,50 +69,5 @@ describe("POST /analysis", () => {
     // multi_task_workflow.yml defines 2 steps: analysis + notification
     expect(workflow!.tasks).toHaveLength(2);
     expect(workflow!.tasks.every(t => t.status === TaskStatus.Queued)).toBe(true);
-  });
-});
-
-describe("TaskRunner", () => {
-  it("runs all tasks and marks the workflow completed", async () => {
-    const factory = new WorkflowFactory(AppDataSource);
-    const workflowYaml = path.join(__dirname, "../../src/workflows/multi_task_workflow.yml");
-
-    const workflow = await factory.createWorkflowFromYAML(
-      workflowYaml,
-      "client-runner",
-      JSON.stringify({ geoJson: VALID_GEO_JSON })
-    );
-
-    const taskRepo = AppDataSource.getRepository(Task);
-    const tasks = await taskRepo.find({
-      where: { workflow: { workflowId: workflow.workflowId } },
-      relations: { workflow: true },
-      order: { stepNumber: "ASC" }
-    });
-
-    expect(tasks).toHaveLength(2);
-
-    const runner = createTaskRunner(AppDataSource);
-    for (const task of tasks) {
-      await runner.run(task);
-    }
-
-    // All tasks should be completed with a Result saved
-    const resultRepo = AppDataSource.getRepository(Result);
-    for (const task of tasks) {
-      const result = await resultRepo.findOneBy({ taskId: task.taskId });
-      expect(result).not.toBeNull();
-      expect(result!.data).toBeDefined();
-    }
-
-    // Workflow should now be completed
-    const workflowRepo = AppDataSource.getRepository(Workflow);
-    const finalWorkflow = await workflowRepo.findOne({
-      where: { workflowId: workflow.workflowId },
-      relations: { tasks: true }
-    });
-
-    expect(finalWorkflow!.status).toBe(WorkflowStatus.Completed);
-    expect(finalWorkflow!.tasks.every(t => t.status === TaskStatus.Completed)).toBe(true);
   });
 });

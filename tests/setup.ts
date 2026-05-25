@@ -1,5 +1,5 @@
 import { beforeAll, afterAll } from "vitest";
-import { AppDataSource } from "../data-source";
+import { AppDataSource } from "../src/data-source";
 
 beforeAll(async () => {
   if (!AppDataSource.isInitialized) {

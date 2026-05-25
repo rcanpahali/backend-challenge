@@ -37,6 +37,9 @@ export class Task {
   stepNumber!: number;
 
   @Column({ nullable: true, type: "text" })
+  errorMessage?: string | null;
+
+  @Column({ nullable: true, type: "text" })
   dependencyTaskId?: string | null;
 
   @ManyToOne(() => Task, { nullable: true, eager: false })

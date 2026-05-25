@@ -52,7 +52,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 }
 
 describe("TaskRunner", () => {
-  it("marks the task as failed when the job throws", async () => {
+  it("marks the task as failed and stores the error message when the job throws", async () => {
     const { taskRepo, resultRepo, workflowRepo, savedStatuses } = makeMocks();
     const runner = new TaskRunner(taskRepo, resultRepo, workflowRepo);
     const task = makeTask({ payload: "not-json" });
@@ -61,6 +61,8 @@ describe("TaskRunner", () => {
 
     expect(task.status).toBe(TaskStatus.Failed);
     expect(savedStatuses).toContain(TaskStatus.Failed);
+    expect(task.errorMessage).toBeDefined();
+    expect(typeof task.errorMessage).toBe("string");
   });
 
   it("enriches task payload with dependency output before running the job", async () => {

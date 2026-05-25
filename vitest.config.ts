@@ -5,7 +5,7 @@ export default defineConfig({
     environment: "node",
     globals: true,
     include: ["tests/**/*.{test,spec}.ts"],
-    setupFiles: ["src/test/setup.ts"],
+    setupFiles: ["tests/setup.ts"],
     env: {
       NODE_ENV: "test",
       DB_PATH: ":memory:", // use in-memory SQLite for tests

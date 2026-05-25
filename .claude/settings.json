@@ -1,9 +1,5 @@
 {
   "permissions": {
-    "allow": [
-      "Bash(npm run *)",
-      "Bash(node -e \"require\\('eslint-plugin-prettier'\\)\")",
-      "Bash(npm test *)"
-    ]
+    "allow": ["Bash(npm run *)", "Bash(npm test *)", "Bash(npx tsc *)"]
   }
 }

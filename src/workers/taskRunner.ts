@@ -64,11 +64,12 @@ export class TaskRunner {
 
       task.status = TaskStatus.Failed;
       task.progress = null;
+      task.errorMessage = error instanceof Error ? error.message : "Unknown error";
       await this.taskRepository.save(task);
 
       throw error;
     } finally {
-      // update workflow status regardless its success level
+      // update workflow status
       await this.workflowRepository.syncStatus(task.workflow.workflowId);
     }
   }

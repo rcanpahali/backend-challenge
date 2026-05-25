@@ -1,17 +1,9 @@
 import "reflect-metadata";
-import * as fs from "fs";
-import * as path from "path";
-import * as os from "os";
 import { describe, it, expect } from "vitest";
 import { AppDataSource } from "../../../src/data-source";
 import { WorkflowFactory } from "../../../src/workflows/WorkflowFactory";
 import { Task } from "../../../src/models/Task";
-
-function writeYaml(content: string): string {
-  const file = path.join(os.tmpdir(), `test-workflow-${Date.now()}-${Math.random()}.yml`);
-  fs.writeFileSync(file, content, "utf8");
-  return file;
-}
+import { writeYaml } from "../../helpers/utils";
 
 describe("WorkflowFactory", () => {
   it("creates tasks with correct dependency links when dependsOn is set", async () => {
@@ -100,7 +92,7 @@ steps:
   });
 
   it("throws when dependsOn references a stepNumber that does not exist", async () => {
-    // Step 3 depends on step 99, but step 99 does not exists
+    // Step 3 depends on step 2, but step 2 does not exist
     const yamlPath = writeYaml(`
 name: "unknown_dep_workflow"
 steps:
