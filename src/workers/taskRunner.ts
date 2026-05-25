@@ -1,15 +1,30 @@
-import { Repository } from "typeorm";
+import { DataSource } from "typeorm";
 import { Task } from "../models/Task";
 import { getJobForTaskType } from "../jobs/JobFactory";
-import { WorkflowStatus } from "../workflows/WorkflowFactory";
-import { Workflow } from "../models/Workflow";
 import { Result } from "../models/Result";
 import logger from "../logger";
-
 import { TaskStatus } from "../types/TaskStatus";
+import { ITaskRepository } from "../repositories/ITaskRepository";
+import { IResultRepository } from "../repositories/IResultRepository";
+import { IWorkflowRepository } from "../repositories/IWorkflowRepository";
+import { TaskRepository } from "../repositories/TaskRepository";
+import { ResultRepository } from "../repositories/ResultRepository";
+import { WorkflowRepository } from "../repositories/WorkflowRepository";
+
+export function createTaskRunner(dataSource: DataSource): TaskRunner {
+  return new TaskRunner(
+    new TaskRepository(dataSource),
+    new ResultRepository(dataSource),
+    new WorkflowRepository(dataSource)
+  );
+}
 
 export class TaskRunner {
-  constructor(private taskRepository: Repository<Task>) {}
+  constructor(
+    private taskRepository: ITaskRepository,
+    private resultRepository: IResultRepository,
+    private workflowRepository: IWorkflowRepository
+  ) {}
 
   /**
    * Runs the appropriate job based on the task's type, managing the task's status.
@@ -22,15 +37,11 @@ export class TaskRunner {
     await this.taskRepository.save(task);
     const job = getJobForTaskType(task.taskType);
 
-    // todo: refactor following part
     try {
       logger.info({ taskId: task.taskId, taskType: task.taskType }, "Starting job");
-      const resultRepository = this.taskRepository.manager.getRepository(Result);
 
       if (task.dependency && task.dependency.resultId) {
-        const depResult = await resultRepository.findOne({
-          where: { resultId: task.dependency.resultId }
-        });
+        const depResult = await this.resultRepository.findById(task.dependency.resultId);
         if (depResult) {
           const parsed = JSON.parse(task.payload) as Record<string, unknown>;
           parsed.dependencyOutput = JSON.parse(depResult.data);
@@ -43,7 +54,7 @@ export class TaskRunner {
       const result = new Result();
       result.taskId = task.taskId!;
       result.data = JSON.stringify(taskResult || {});
-      await resultRepository.save(result);
+      await this.resultRepository.save(result);
       task.resultId = result.resultId!;
       task.status = TaskStatus.Completed;
       task.progress = null;
@@ -56,29 +67,9 @@ export class TaskRunner {
       await this.taskRepository.save(task);
 
       throw error;
-    }
-
-    const workflowRepository = this.taskRepository.manager.getRepository(Workflow);
-    const currentWorkflow = await workflowRepository.findOne({
-      where: { workflowId: task.workflow.workflowId },
-      relations: {
-        tasks: true
-      }
-    });
-
-    if (currentWorkflow) {
-      const allCompleted = currentWorkflow.tasks.every(t => t.status === TaskStatus.Completed);
-      const anyFailed = currentWorkflow.tasks.some(t => t.status === TaskStatus.Failed);
-
-      if (anyFailed) {
-        currentWorkflow.status = WorkflowStatus.Failed;
-      } else if (allCompleted) {
-        currentWorkflow.status = WorkflowStatus.Completed;
-      } else {
-        currentWorkflow.status = WorkflowStatus.InProgress;
-      }
-
-      await workflowRepository.save(currentWorkflow);
+    } finally {
+      // update workflow status regardless its success level
+      await this.workflowRepository.syncStatus(task.workflow.workflowId);
     }
   }
 }

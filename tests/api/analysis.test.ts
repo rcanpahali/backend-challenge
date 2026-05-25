@@ -7,23 +7,10 @@ import { AppDataSource } from "../../src/data-source";
 import { Workflow } from "../../src/models/Workflow";
 import { Task } from "../../src/models/Task";
 import { WorkflowStatus, WorkflowFactory } from "../../src/workflows/WorkflowFactory";
-import { TaskRunner } from "../../src/workers/taskRunner";
+import { createTaskRunner } from "../../src/workers/taskRunner";
 import { TaskStatus } from "../../src/types/TaskStatus";
 import { Result } from "../../src/models/Result";
-
-// Brazil polygon from the README example
-const VALID_GEO_JSON = {
-  type: "Polygon",
-  coordinates: [
-    [
-      [-63.624885020050996, -10.311050368263523],
-      [-63.624885020050996, -10.367865108370523],
-      [-63.61278302732815, -10.367865108370523],
-      [-63.61278302732815, -10.311050368263523],
-      [-63.624885020050996, -10.311050368263523]
-    ]
-  ]
-};
+import { VALID_GEO_JSON } from "./utils";
 
 describe("POST /analysis", () => {
   let server: http.Server;
@@ -109,7 +96,7 @@ describe("TaskRunner", () => {
 
     expect(tasks).toHaveLength(2);
 
-    const runner = new TaskRunner(taskRepo);
+    const runner = createTaskRunner(AppDataSource);
     for (const task of tasks) {
       await runner.run(task);
     }

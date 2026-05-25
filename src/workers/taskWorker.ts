@@ -1,13 +1,12 @@
 import { AppDataSource } from "../data-source";
-import { Task } from "../models/Task";
-import { TaskRunner } from "./taskRunner";
 import { TaskRepository } from "../repositories/TaskRepository";
+import { createTaskRunner } from "./taskRunner";
 import { config } from "../config";
 import logger from "../logger";
 
 export async function taskWorker() {
   const taskRepo = new TaskRepository(AppDataSource);
-  const taskRunner = new TaskRunner(AppDataSource.getRepository(Task));
+  const taskRunner = createTaskRunner(AppDataSource);
 
   while (true) {
     const task = await taskRepo.findNextEligibleTask();

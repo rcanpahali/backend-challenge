@@ -1,42 +1,41 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
-import { Repository } from "typeorm";
 import { TaskRunner } from "../../../src/workers/taskRunner";
 import { TaskStatus } from "../../../src/types/TaskStatus";
 import { Task } from "../../../src/models/Task";
 import { Result } from "../../../src/models/Result";
+import { ITaskRepository } from "../../../src/repositories/ITaskRepository";
+import { IResultRepository } from "../../../src/repositories/IResultRepository";
+import { IWorkflowRepository } from "../../../src/repositories/IWorkflowRepository";
 import * as JobFactory from "../../../src/jobs/JobFactory";
 
 afterEach(() => {
   vi.restoreAllMocks();
 });
 
-function makeMockRepo(options: { resultFindOne?: ReturnType<typeof vi.fn> } = {}) {
+function makeMocks(options: { resultFindById?: ReturnType<typeof vi.fn> } = {}) {
   const savedStatuses: TaskStatus[] = [];
-  const resultFindOne = options.resultFindOne ?? vi.fn().mockResolvedValue(null);
+  const resultFindById = options.resultFindById ?? vi.fn().mockResolvedValue(null);
 
-  const mockRepo = {
+  const taskRepo = {
+    findNextEligibleTask: vi.fn().mockResolvedValue(null),
     save: vi.fn().mockImplementation((task: Task) => {
       savedStatuses.push(task.status);
-      return task;
-    }),
-    manager: {
-      getRepository: vi.fn().mockImplementation((entity: unknown) => {
-        if (entity === Result) {
-          return {
-            save: vi.fn().mockImplementation((r: Result) => r),
-            findOne: resultFindOne
-          };
-        }
-        // Workflow repo
-        return {
-          save: vi.fn().mockResolvedValue(undefined),
-          findOne: vi.fn().mockResolvedValue(null)
-        };
-      })
-    }
-  } as unknown as Repository<Task>;
+      return Promise.resolve(task);
+    })
+  } as unknown as ITaskRepository;
 
-  return { mockRepo, savedStatuses };
+  const resultRepo = {
+    findById: resultFindById,
+    save: vi.fn().mockImplementation((r: Result) => Promise.resolve(r))
+  } as unknown as IResultRepository;
+
+  const workflowRepo = {
+    findWithTasks: vi.fn().mockResolvedValue(null),
+    syncStatus: vi.fn().mockResolvedValue(undefined),
+    save: vi.fn().mockResolvedValue(undefined)
+  } as unknown as IWorkflowRepository;
+
+  return { taskRepo, resultRepo, workflowRepo, savedStatuses };
 }
 
 function makeTask(overrides: Partial<Task> = {}): Task {
@@ -54,8 +53,8 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 
 describe("TaskRunner", () => {
   it("marks the task as failed when the job throws", async () => {
-    const { mockRepo, savedStatuses } = makeMockRepo();
-    const runner = new TaskRunner(mockRepo);
+    const { taskRepo, resultRepo, workflowRepo, savedStatuses } = makeMocks();
+    const runner = new TaskRunner(taskRepo, resultRepo, workflowRepo);
     const task = makeTask({ payload: "not-json" });
 
     await expect(runner.run(task)).rejects.toThrow();
@@ -72,15 +71,15 @@ describe("TaskRunner", () => {
       createdAt: new Date()
     };
 
-    const { mockRepo } = makeMockRepo({
-      resultFindOne: vi.fn().mockResolvedValue(depResult)
+    const { taskRepo, resultRepo, workflowRepo } = makeMocks({
+      resultFindById: vi.fn().mockResolvedValue(depResult)
     });
 
     vi.spyOn(JobFactory, "getJobForTaskType").mockReturnValue({
       run: vi.fn().mockResolvedValue({ done: true })
     });
 
-    const runner = new TaskRunner(mockRepo);
+    const runner = new TaskRunner(taskRepo, resultRepo, workflowRepo);
     const task = makeTask({
       taskType: "analysis",
       payload: JSON.stringify({ geoJson: {} }),
@@ -98,8 +97,8 @@ describe("TaskRunner", () => {
       run: vi.fn().mockResolvedValue({ done: true })
     });
 
-    const { mockRepo } = makeMockRepo();
-    const runner = new TaskRunner(mockRepo);
+    const { taskRepo, resultRepo, workflowRepo } = makeMocks();
+    const runner = new TaskRunner(taskRepo, resultRepo, workflowRepo);
     const originalPayload = JSON.stringify({ geoJson: {} });
     const task = makeTask({ taskType: "analysis", payload: originalPayload });
 

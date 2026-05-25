@@ -3,7 +3,8 @@ import { ReportGenerationJob } from "../../../src/jobs/ReportGenerationJob";
 import { Task } from "../../../src/models/Task";
 import { Result } from "../../../src/models/Result";
 import { TaskStatus } from "../../../src/types/TaskStatus";
-import { ITaskResultRepository } from "../../../src/repositories/ITaskResultRepository";
+import { ITaskRepository } from "../../../src/repositories/ITaskRepository";
+import { IResultRepository } from "../../../src/repositories/IResultRepository";
 
 function makeTask(overrides: Partial<Task> = {}): Task {
   return {
@@ -29,14 +30,22 @@ function makePrecedingTask(step: number, status: TaskStatus, resultId?: string):
   } as Task;
 }
 
-function makeRepo(
+function makeRepos(
   allTasks: Task[],
   resultsByResultId: Record<string, Result>
-): ITaskResultRepository {
-  return {
+): { taskRepo: ITaskRepository; resultRepo: IResultRepository } {
+  const taskRepo = {
     findTasksByWorkflow: () => Promise.resolve(allTasks),
-    findResultById: (id: string) => Promise.resolve(resultsByResultId[id] ?? null)
-  };
+    findNextEligibleTask: () => Promise.resolve(null),
+    save: (t: Task) => Promise.resolve(t)
+  } as unknown as ITaskRepository;
+
+  const resultRepo = {
+    findById: (id: string) => Promise.resolve(resultsByResultId[id] ?? null),
+    save: (r: Result) => Promise.resolve(r)
+  } as unknown as IResultRepository;
+
+  return { taskRepo, resultRepo };
 }
 
 describe("ReportGenerationJob", () => {
@@ -58,11 +67,11 @@ describe("ReportGenerationJob", () => {
       createdAt: new Date()
     };
 
-    const repo = makeRepo([precedingTask1, precedingTask2, reportTask], {
+    const { taskRepo, resultRepo } = makeRepos([precedingTask1, precedingTask2, reportTask], {
       "result-1": result1,
       "result-2": result2
     });
-    const job = new ReportGenerationJob(repo);
+    const job = new ReportGenerationJob(taskRepo, resultRepo);
     const output = (await job.run(reportTask)) as {
       workflowId: string;
       tasks: { taskId: string; type: string; output: unknown }[];
@@ -90,8 +99,8 @@ describe("ReportGenerationJob", () => {
     const taskWithNoResult = makePrecedingTask(1, TaskStatus.Completed);
     const reportTask = makeTask({ stepNumber: 2 });
 
-    const repo = makeRepo([taskWithNoResult, reportTask], {});
-    const job = new ReportGenerationJob(repo);
+    const { taskRepo, resultRepo } = makeRepos([taskWithNoResult, reportTask], {});
+    const job = new ReportGenerationJob(taskRepo, resultRepo);
     const output = (await job.run(reportTask)) as {
       tasks: { output: unknown }[];
     };

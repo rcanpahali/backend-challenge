@@ -7,6 +7,7 @@ import {
   UpdateDateColumn
 } from "typeorm";
 import { Task } from "./Task";
+import { TaskStatus } from "../types/TaskStatus";
 import { WorkflowStatus } from "../workflows/WorkflowFactory";
 
 @Entity({ name: "workflows" })
@@ -28,4 +29,17 @@ export class Workflow {
 
   @UpdateDateColumn()
   updatedAt!: Date;
+
+  deriveStatus(): WorkflowStatus {
+    if (!this.tasks?.length) {
+      return WorkflowStatus.InProgress;
+    }
+    if (this.tasks.some(t => t.status === TaskStatus.Failed)) {
+      return WorkflowStatus.Failed;
+    }
+    if (this.tasks.every(t => t.status === TaskStatus.Completed)) {
+      return WorkflowStatus.Completed;
+    }
+    return WorkflowStatus.InProgress;
+  }
 }
