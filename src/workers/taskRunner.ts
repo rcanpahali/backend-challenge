@@ -1,73 +1,76 @@
-import { Repository } from 'typeorm';
-import { Task } from '../models/Task';
-import { getJobForTaskType } from '../jobs/JobFactory';
-import {WorkflowStatus} from "../workflows/WorkflowFactory";
-import {Workflow} from "../models/Workflow";
-import {Result} from "../models/Result";
+import { DataSource } from "typeorm";
+import { Task } from "../models/Task";
+import { getJobForTaskType } from "../jobs/JobFactory";
+import { Result } from "../models/Result";
+import logger from "../logger";
+import { TaskStatus } from "../types/TaskStatus";
+import { ITaskRepository } from "../repositories/ITaskRepository";
+import { IResultRepository } from "../repositories/IResultRepository";
+import { IWorkflowRepository } from "../repositories/IWorkflowRepository";
+import { TaskRepository } from "../repositories/TaskRepository";
+import { ResultRepository } from "../repositories/ResultRepository";
+import { WorkflowRepository } from "../repositories/WorkflowRepository";
 
-export enum TaskStatus {
-    Queued = 'queued',
-    InProgress = 'in_progress',
-    Completed = 'completed',
-    Failed = 'failed'
+export function createTaskRunner(dataSource: DataSource): TaskRunner {
+  return new TaskRunner(
+    new TaskRepository(dataSource),
+    new ResultRepository(dataSource),
+    new WorkflowRepository(dataSource)
+  );
 }
 
 export class TaskRunner {
-    constructor(
-        private taskRepository: Repository<Task>,
-    ) {}
+  constructor(
+    private taskRepository: ITaskRepository,
+    private resultRepository: IResultRepository,
+    private workflowRepository: IWorkflowRepository
+  ) {}
 
-    /**
-     * Runs the appropriate job based on the task's type, managing the task's status.
-     * @param task - The task entity that determines which job to run.
-     * @throws If the job fails, it rethrows the error.
-     */
-    async run(task: Task): Promise<void> {
-        task.status = TaskStatus.InProgress;
-        task.progress = 'starting job...';
-        await this.taskRepository.save(task);
-        const job = getJobForTaskType(task.taskType);
+  /**
+   * Runs the appropriate job based on the task's type, managing the task's status.
+   * @param task - The task entity that determines which job to run.
+   * @throws If the job fails, it rethrows the error.
+   */
+  async run(task: Task): Promise<void> {
+    task.status = TaskStatus.InProgress;
+    task.progress = "starting job...";
+    await this.taskRepository.save(task);
+    const job = getJobForTaskType(task.taskType);
 
-        try {
-            console.log(`Starting job ${task.taskType} for task ${task.taskId}...`);
-            const resultRepository = this.taskRepository.manager.getRepository(Result);
-            const taskResult = await job.run(task);
-            console.log(`Job ${task.taskType} for task ${task.taskId} completed successfully.`);
-            const result = new Result();
-            result.taskId = task.taskId!;
-            result.data = JSON.stringify(taskResult || {});
-            await resultRepository.save(result);
-            task.resultId = result.resultId!;
-            task.status = TaskStatus.Completed;
-            task.progress = null;
-            await this.taskRepository.save(task);
+    try {
+      logger.info({ taskId: task.taskId, taskType: task.taskType }, "Starting job");
 
-        } catch (error: any) {
-            console.error(`Error running job ${task.taskType} for task ${task.taskId}:`, error);
-
-            task.status = TaskStatus.Failed;
-            task.progress = null;
-            await this.taskRepository.save(task);
-
-            throw error;
+      if (task.dependency && task.dependency.resultId) {
+        const depResult = await this.resultRepository.findById(task.dependency.resultId);
+        if (depResult && depResult.data) {
+          const parsed = JSON.parse(task.payload) as Record<string, unknown>;
+          parsed.dependencyOutput = JSON.parse(depResult.data);
+          task.payload = JSON.stringify(parsed);
         }
+      }
 
-        const workflowRepository = this.taskRepository.manager.getRepository(Workflow);
-        const currentWorkflow = await workflowRepository.findOne({ where: { workflowId: task.workflow.workflowId }, relations: ['tasks'] });
+      const taskResult = await job.run(task);
+      logger.info({ taskId: task.taskId, taskType: task.taskType }, "Job completed successfully");
+      const result = new Result();
+      result.taskId = task.taskId!;
+      result.data = JSON.stringify(taskResult || {});
+      await this.resultRepository.save(result);
+      task.resultId = result.resultId!;
+      task.status = TaskStatus.Completed;
+      task.progress = null;
+      await this.taskRepository.save(task);
+    } catch (error: unknown) {
+      logger.error({ taskId: task.taskId, taskType: task.taskType, err: error }, "Job failed");
 
-        if (currentWorkflow) {
-            const allCompleted = currentWorkflow.tasks.every(t => t.status === TaskStatus.Completed);
-            const anyFailed = currentWorkflow.tasks.some(t => t.status === TaskStatus.Failed);
+      task.status = TaskStatus.Failed;
+      task.progress = null;
+      task.errorMessage = error instanceof Error ? error.message : "Unknown error";
+      await this.taskRepository.save(task);
 
-            if (anyFailed) {
-                currentWorkflow.status = WorkflowStatus.Failed;
-            } else if (allCompleted) {
-                currentWorkflow.status = WorkflowStatus.Completed;
-            } else {
-                currentWorkflow.status = WorkflowStatus.InProgress;
-            }
-
-            await workflowRepository.save(currentWorkflow);
-        }
+      throw error;
+    } finally {
+      // update workflow status
+      await this.workflowRepository.syncStatus(task.workflow.workflowId);
     }
+  }
 }

@@ -1,33 +1,58 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
-import { Workflow } from './Workflow';
-import {TaskStatus} from "../workers/taskRunner";
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  Column,
+  ManyToOne,
+  JoinColumn,
+  CreateDateColumn,
+  UpdateDateColumn
+} from "typeorm";
+import { Workflow } from "./Workflow";
+import { TaskStatus } from "../types/TaskStatus";
 
-@Entity({ name: 'tasks' })
+@Entity({ name: "tasks" })
 export class Task {
-    @PrimaryGeneratedColumn('uuid')
-    taskId!: string;
+  @PrimaryGeneratedColumn("uuid")
+  taskId!: string;
 
-    @Column()
-    clientId!: string;
+  @Column()
+  clientId!: string;
 
-    @Column('text')
-    geoJson!: string;
+  @Column("text")
+  payload!: string;
 
-    @Column()
-    status!: TaskStatus;
+  @Column({ type: "text" })
+  status!: TaskStatus;
 
-    @Column({ nullable: true, type: 'text' })
-    progress?: string | null;
+  @Column({ nullable: true, type: "text" })
+  progress?: string | null;
 
-    @Column({ nullable: true })
-    resultId?: string;
+  @Column({ nullable: true })
+  resultId?: string;
 
-    @Column()
-    taskType!: string;
+  @Column()
+  taskType!: string;
 
-    @Column({ default: 1 })
-    stepNumber!: number;
+  @Column({ default: 1 })
+  stepNumber!: number;
 
-    @ManyToOne(() => Workflow, workflow => workflow.tasks)
-    workflow!: Workflow;
+  @Column({ nullable: true, type: "text" })
+  errorMessage?: string | null;
+
+  @Column({ nullable: true, type: "text" })
+  dependencyTaskId?: string | null;
+
+  // a task can depend on another task in the same workflow
+  @ManyToOne(() => Task, { nullable: true, eager: false })
+  @JoinColumn({ name: "dependencyTaskId" })
+  dependency?: Task | null;
+
+  @ManyToOne(() => Workflow, workflow => workflow.tasks)
+  workflow!: Workflow;
+
+  @CreateDateColumn()
+  createdAt!: Date;
+
+  @UpdateDateColumn()
+  updatedAt!: Date;
 }

@@ -1,21 +1,18 @@
 import express from "express";
-import fs from "fs";
+import fs from "fs/promises";
 import path from "path";
 import { marked } from "marked";
+import logger from "../logger";
 
 const router = express.Router();
 const staticPath = path.join(__dirname, "../../public");
 router.use("/public", express.static(staticPath));
 
-router.get("/", (req, res) => {
+router.get("/", async (_req, res) => {
   const readmePath = path.join(__dirname, "../..", "README.md");
-  fs.readFile(readmePath, "utf8", (err, data) => {
-    if (err) {
-      console.error("Error reading README.md:", err);
-      return res.status(500).send("Error loading README.md");
-    }
-
-    const htmlContent = marked(data);
+  try {
+    const data = await fs.readFile(readmePath, "utf8");
+    const htmlContent = await marked(data);
 
     // Add CSS for dark mode and image resizing
     const styledHtml = `
@@ -77,7 +74,10 @@ router.get("/", (req, res) => {
 
     res.setHeader("Content-Type", "text/html");
     res.send(styledHtml);
-  });
+  } catch (err: unknown) {
+    logger.error({ err }, "Error reading README.md");
+    res.status(500).send("Error loading README.md");
+  }
 });
 
 export default router;

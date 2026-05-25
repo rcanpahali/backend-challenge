@@ -1,0 +1,23 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "codesandbox",
+    "dotenv",
+    "geojson",
+    "geoJson",
+    "geospatial",
+    "nodemon",
+    "sqlite",
+    "taskid",
+    "tasktype",
+    "tsnode",
+    "turf",
+    "typeorm",
+    "uuidv",
+    "vitest",
+    "workflowid",
+    "zod"
+  ],
+  "ignorePaths": ["node_modules/**", "dist/**", "*.lock", "package-lock.json", "data/**"]
+}

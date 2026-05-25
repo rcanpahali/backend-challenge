@@ -1,0 +1,110 @@
+import { describe, it, expect } from "vitest";
+import { ReportGenerationJob } from "../../../src/jobs/ReportGenerationJob";
+import { Task } from "../../../src/models/Task";
+import { Result } from "../../../src/models/Result";
+import { TaskStatus } from "../../../src/types/TaskStatus";
+import { ITaskRepository } from "../../../src/repositories/ITaskRepository";
+import { IResultRepository } from "../../../src/repositories/IResultRepository";
+
+function makeTask(overrides: Partial<Task> = {}): Task {
+  return {
+    taskId: "report-task-id",
+    clientId: "test-client",
+    taskType: "report",
+    status: TaskStatus.InProgress,
+    stepNumber: 3,
+    payload: JSON.stringify({}),
+    workflow: { workflowId: "test-workflow-id" },
+    ...overrides
+  } as Task;
+}
+
+function makePrecedingTask(step: number, status: TaskStatus, resultId?: string): Task {
+  return {
+    taskId: `task-step-${step}`,
+    taskType: "analysis",
+    status,
+    stepNumber: step,
+    resultId,
+    workflow: { workflowId: "test-workflow-id" }
+  } as Task;
+}
+
+function makeRepos(
+  allTasks: Task[],
+  resultsByResultId: Record<string, Result>
+): { taskRepo: ITaskRepository; resultRepo: IResultRepository } {
+  const taskRepo = {
+    findTasksByWorkflow: () => Promise.resolve(allTasks),
+    findNextEligibleTask: () => Promise.resolve(null),
+    save: (t: Task) => Promise.resolve(t)
+  } as unknown as ITaskRepository;
+
+  const resultRepo = {
+    findById: (id: string) => Promise.resolve(resultsByResultId[id] ?? null),
+    save: (r: Result) => Promise.resolve(r)
+  } as unknown as IResultRepository;
+
+  return { taskRepo, resultRepo };
+}
+
+describe("ReportGenerationJob", () => {
+  it("aggregates results from all preceding tasks", async () => {
+    const precedingTask1 = makePrecedingTask(1, TaskStatus.Completed, "result-1");
+    const precedingTask2 = makePrecedingTask(2, TaskStatus.Completed, "result-2");
+    const reportTask = makeTask({ stepNumber: 3 });
+
+    const result1: Result = {
+      resultId: "result-1",
+      taskId: "task-step-1",
+      data: JSON.stringify({ value: 42 }),
+      createdAt: new Date()
+    };
+    const result2: Result = {
+      resultId: "result-2",
+      taskId: "task-step-2",
+      data: JSON.stringify({ sent: true }),
+      createdAt: new Date()
+    };
+
+    const { taskRepo, resultRepo } = makeRepos([precedingTask1, precedingTask2, reportTask], {
+      "result-1": result1,
+      "result-2": result2
+    });
+    const job = new ReportGenerationJob(taskRepo, resultRepo);
+    const output = (await job.run(reportTask)) as {
+      workflowId: string;
+      tasks: { taskId: string; type: string; output: unknown }[];
+      finalReport: { totalTasks: number; taskTypes: string[]; completedAt: string };
+    };
+
+    expect(output.workflowId).toBe("test-workflow-id");
+    expect(output.tasks).toHaveLength(2);
+    expect(output.tasks[0]).toMatchObject({
+      taskId: "task-step-1",
+      type: "analysis",
+      output: { value: 42 }
+    });
+    expect(output.tasks[1]).toMatchObject({
+      taskId: "task-step-2",
+      type: "analysis",
+      output: { sent: true }
+    });
+    expect(output.finalReport.totalTasks).toBe(2);
+    expect(output.finalReport.taskTypes).toEqual(["analysis", "analysis"]);
+    expect(output.finalReport.completedAt).toBeTypeOf("string");
+  });
+
+  it("returns null output for a task with no result", async () => {
+    const taskWithNoResult = makePrecedingTask(1, TaskStatus.Completed);
+    const reportTask = makeTask({ stepNumber: 2 });
+
+    const { taskRepo, resultRepo } = makeRepos([taskWithNoResult, reportTask], {});
+    const job = new ReportGenerationJob(taskRepo, resultRepo);
+    const output = (await job.run(reportTask)) as {
+      tasks: { output: unknown }[];
+    };
+
+    expect(output.tasks[0].output).toBeNull();
+  });
+});
