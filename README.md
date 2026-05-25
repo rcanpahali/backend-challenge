@@ -16,22 +16,18 @@ This repository demonstrates a backend architecture that handles asynchronous ta
 ## Key Features
 
 1. **Entity Modeling with TypeORM**
-
    - **Task Entity:** Represents an individual unit of work with attributes like `taskType`, `status`, `progress`, and references to a `Workflow`.
    - **Workflow Entity:** Groups multiple tasks into a defined sequence or steps, allowing complex multi-step processes.
 
 2. **Workflow Creation from YAML**
-
    - Use `WorkflowFactory` to load workflow definitions from a YAML file.
    - Dynamically create workflows and tasks without code changes by updating YAML files.
 
 3. **Asynchronous Task Execution**
-
    - A background worker (`taskWorker`) continuously polls for `queued` tasks.
    - The `TaskRunner` runs the appropriate job based on a task’s `taskType`.
 
 4. **Robust Status Management**
-
    - `TaskRunner` updates the status of tasks (from `queued` to `in_progress`, `completed`, or `failed`).
    - Workflow status is evaluated after each task completes, ensuring you know when the entire workflow is `completed` or `failed`.
 
@@ -95,7 +91,6 @@ src
    ```
 
 3. **Configure TypeORM:**
-
    - Edit `data-source.ts` to ensure the `entities` array includes `Task` and `Workflow` entities.
    - Confirm database settings (e.g. SQLite file path).
 
@@ -234,6 +229,8 @@ Create a new job class to generate a report by aggregating the outputs of multip
 **Objective:**  
 Modify the system to support workflows with tasks that depend on the outputs of earlier tasks.
 
+**TODO: Add retry logic as part of task #3's dependency workflow as part of architectural improvements. (When implementing, remove this TODO**
+
 #### **Steps:**
 
 1. Update the `Task` entity to include a `dependency` field that references another task
@@ -321,7 +318,6 @@ Implement an API endpoint to retrieve the final results of a completed workflow.
 ### **Deliverables**
 
 - **Code Implementation:**
-
   - New jobs: `PolygonAreaJob` and `ReportGenerationJob`.
   - Enhanced workflow support for interdependent tasks.
   - Workflow final results aggregation.
