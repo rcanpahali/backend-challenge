@@ -15,6 +15,8 @@ npm install
 npm start
 ```
 
+Sometimes, after switching Node.js versions on codesandbox run `npm rebuild better-sqlite3` if the app fails to start and re-run `npm install`.
+
 **You will see:** `Server is running at http://localhost:3000`
 
 The server starts and a background worker begins polling for tasks every 5 seconds.
@@ -156,14 +158,14 @@ npm test
 
 ### Verification Summary
 
-| Step | What was tested | Expected result |
-|------|----------------|-----------------|
-| `npm start` | Server starts | `Server is running at http://localhost:3000` |
-| `POST /analysis` | Workflow and 3 tasks created | `202` with `workflowId` |
-| `GET /workflow/:id/status` (immediately) | Task 5 — status endpoint | `initial`, 0/3 completed |
-| `GET /workflow/:id/status` (after ~30s) | Tasks 3 & 5 — sequential execution + status | `completed`, 3/3 completed |
-| `GET /workflow/:id/results` | Tasks 2, 4 & 6 — report job, finalResult, results endpoint | `200` with full `finalResult` |
-| `GET /status` with unknown ID | Task 5 — 404 handling | `404` |
-| `GET /results` with unknown ID | Task 6 — 404 handling | `404` |
-| `GET /results` before completion | Task 6 — 400 handling | `400 - Workflow is not yet completed` |
-| `npm test` | All tasks including Task 1 (PolygonAreaJob) | 25/25 tests pass |
+| Step                                     | What was tested                                            | Expected result                              |
+| ---------------------------------------- | ---------------------------------------------------------- | -------------------------------------------- |
+| `npm start`                              | Server starts                                              | `Server is running at http://localhost:3000` |
+| `POST /analysis`                         | Workflow and 3 tasks created                               | `202` with `workflowId`                      |
+| `GET /workflow/:id/status` (immediately) | Task 5 — status endpoint                                   | `initial`, 0/3 completed                     |
+| `GET /workflow/:id/status` (after ~30s)  | Tasks 3 & 5 — sequential execution + status                | `completed`, 3/3 completed                   |
+| `GET /workflow/:id/results`              | Tasks 2, 4 & 6 — report job, finalResult, results endpoint | `200` with full `finalResult`                |
+| `GET /status` with unknown ID            | Task 5 — 404 handling                                      | `404`                                        |
+| `GET /results` with unknown ID           | Task 6 — 404 handling                                      | `404`                                        |
+| `GET /results` before completion         | Task 6 — 400 handling                                      | `400 - Workflow is not yet completed`        |
+| `npm test`                               | All tasks including Task 1 (PolygonAreaJob)                | 25/25 tests pass                             |
