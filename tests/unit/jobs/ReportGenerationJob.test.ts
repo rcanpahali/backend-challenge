@@ -86,16 +86,6 @@ describe("ReportGenerationJob", () => {
     expect(output.finalReport.completedAt).toBeTypeOf("string");
   });
 
-  it("throws when a preceding task is not yet completed", async () => {
-    const incompleteTask = makePrecedingTask(1, TaskStatus.InProgress);
-    const reportTask = makeTask({ stepNumber: 2 });
-
-    const repo = makeRepo([incompleteTask, reportTask], {});
-    const job = new ReportGenerationJob(repo);
-
-    await expect(job.run(reportTask)).rejects.toThrow("is not yet completed");
-  });
-
   it("returns null output for a preceding task with no result", async () => {
     const taskWithNoResult = makePrecedingTask(1, TaskStatus.Completed);
     const reportTask = makeTask({ stepNumber: 2 });

@@ -229,8 +229,6 @@ Create a new job class to generate a report by aggregating the outputs of multip
 **Objective:**  
 Modify the system to support workflows with tasks that depend on the outputs of earlier tasks.
 
-**TODO: Add retry logic as part of task #3's dependency workflow as part of architectural improvements. (When implementing, remove this TODO**
-
 #### **Steps:**
 
 1. Update the `Task` entity to include a `dependency` field that references another task

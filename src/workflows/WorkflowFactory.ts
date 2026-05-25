@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as yaml from "js-yaml";
 import { z } from "zod";
-import { DataSource } from "typeorm";
+import { DataSource, Repository } from "typeorm";
 import logger from "../logger";
 import { Workflow } from "../models/Workflow";
 import { Task } from "../models/Task";
@@ -17,7 +17,8 @@ export enum WorkflowStatus {
 // yaml.load() returns `unknown`. Zod validates the actual shape before we use it, otherwise it silently fails on invalid input.
 const WorkflowStepSchema = z.object({
   taskType: z.string(),
-  stepNumber: z.number()
+  stepNumber: z.number(),
+  dependsOn: z.number().optional()
 });
 
 const WorkflowDefinitionSchema = z.object({
@@ -48,6 +49,16 @@ export class WorkflowFactory {
     }
 
     const workflowDef = parsed.data;
+
+    for (const step of workflowDef.steps) {
+      const dependsOnLaterStep = step.dependsOn !== undefined && step.dependsOn >= step.stepNumber;
+      if (dependsOnLaterStep) {
+        throw new Error(
+          `Step ${step.stepNumber} cannot depend on step ${step.dependsOn}: a step must depend on an earlier step`
+        );
+      }
+    }
+
     const workflowRepository = this.dataSource.getRepository(Workflow);
     const taskRepository = this.dataSource.getRepository(Task);
     const workflow = new Workflow();
@@ -57,6 +68,7 @@ export class WorkflowFactory {
 
     const savedWorkflow = await workflowRepository.save(workflow);
 
+    // Phase 1: create and save all tasks without dependency links
     const tasks: Task[] = workflowDef.steps.map(step => {
       const task = new Task();
       task.clientId = clientId;
@@ -68,8 +80,38 @@ export class WorkflowFactory {
       return task;
     });
 
-    await taskRepository.save(tasks);
+    const savedTasks = await taskRepository.save(tasks);
+
+    await this.wireDependencies(workflowDef.steps, savedTasks, taskRepository);
 
     return savedWorkflow;
+  }
+
+  private async wireDependencies(
+    steps: z.infer<typeof WorkflowStepSchema>[],
+    savedTasks: Task[],
+    taskRepository: Repository<Task>
+  ): Promise<void> {
+    const stepToTask = new Map(savedTasks.map(t => [t.stepNumber, t]));
+    const tasksWithDeps = steps
+      .filter(
+        (step): step is z.infer<typeof WorkflowStepSchema> & { dependsOn: number } =>
+          step.dependsOn !== undefined
+      )
+      .map(step => {
+        const task = stepToTask.get(step.stepNumber)!;
+        const depTask = stepToTask.get(step.dependsOn);
+        if (!depTask) {
+          throw new Error(
+            `Step ${step.stepNumber} references unknown dependsOn stepNumber ${step.dependsOn}`
+          );
+        }
+        task.dependency = depTask;
+        return task;
+      });
+
+    if (tasksWithDeps.length > 0) {
+      await taskRepository.save(tasksWithDeps);
+    }
   }
 }

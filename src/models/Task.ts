@@ -3,6 +3,7 @@ import {
   PrimaryGeneratedColumn,
   Column,
   ManyToOne,
+  JoinColumn,
   CreateDateColumn,
   UpdateDateColumn
 } from "typeorm";
@@ -34,6 +35,13 @@ export class Task {
 
   @Column({ default: 1 })
   stepNumber!: number;
+
+  @Column({ nullable: true, type: "text" })
+  dependencyTaskId?: string | null;
+
+  @ManyToOne(() => Task, { nullable: true, eager: false })
+  @JoinColumn({ name: "dependencyTaskId" })
+  dependency?: Task | null;
 
   @ManyToOne(() => Workflow, workflow => workflow.tasks)
   workflow!: Workflow;

@@ -13,6 +13,8 @@
 | -------------------- | --------------------- |
 | Route handlers       | `src/routes/`         |
 | Job classes          | `src/jobs/`           |
+| Repository interfaces & implementations | `src/repositories/` |
+| Shared types & enums | `src/types/`          |
 | Entity models        | `src/models/`         |
 | Worker logic         | `src/workers/`        |
 | Workflow logic       | `src/workflows/`      |
@@ -27,6 +29,7 @@
 - Register new jobs in the `jobMap` in `src/jobs/JobFactory.ts`
 - Use `parsePayload<T>(task)` to extract typed data from `task.payload` — never call `JSON.parse` directly in a job
 - Throwing an error from `job.run()` is sufficient to mark a task failed — `TaskRunner` handles the status update
+- Jobs that need DB access must depend on a repository interface from `src/repositories/`, not on `DataSource` directly — wire the concrete implementation in `JobFactory.ts`
 
 ## Entities & Persistence
 

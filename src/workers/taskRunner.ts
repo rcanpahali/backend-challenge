@@ -26,6 +26,18 @@ export class TaskRunner {
     try {
       logger.info({ taskId: task.taskId, taskType: task.taskType }, "Starting job");
       const resultRepository = this.taskRepository.manager.getRepository(Result);
+
+      if (task.dependency && task.dependency.resultId) {
+        const depResult = await resultRepository.findOne({
+          where: { resultId: task.dependency.resultId }
+        });
+        if (depResult) {
+          const parsed = JSON.parse(task.payload) as Record<string, unknown>;
+          parsed.dependencyOutput = JSON.parse(depResult.data);
+          task.payload = JSON.stringify(parsed);
+        }
+      }
+
       const taskResult = await job.run(task);
       logger.info({ taskId: task.taskId, taskType: task.taskType }, "Job completed successfully");
       const result = new Result();

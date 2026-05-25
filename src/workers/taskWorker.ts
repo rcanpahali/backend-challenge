@@ -1,21 +1,16 @@
 import { AppDataSource } from "../data-source";
 import { Task } from "../models/Task";
 import { TaskRunner } from "./taskRunner";
-import { TaskStatus } from "../types/TaskStatus";
+import { TaskRepository } from "../repositories/TaskRepository";
 import { config } from "../config";
 import logger from "../logger";
 
 export async function taskWorker() {
-  const taskRepository = AppDataSource.getRepository(Task);
-  const taskRunner = new TaskRunner(taskRepository);
+  const taskRepo = new TaskRepository(AppDataSource);
+  const taskRunner = new TaskRunner(AppDataSource.getRepository(Task));
 
   while (true) {
-    const task = await taskRepository.findOne({
-      where: { status: TaskStatus.Queued },
-      relations: {
-        workflow: true
-      } // Ensure workflow is loaded
-    });
+    const task = await taskRepo.findNextEligibleTask();
 
     if (task) {
       try {
