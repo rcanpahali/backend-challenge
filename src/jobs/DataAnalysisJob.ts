@@ -4,12 +4,13 @@ import booleanWithin from "@turf/boolean-within";
 import { Feature, Polygon } from "geojson";
 import countryMapping from "../data/world_data.json";
 import logger from "../logger";
+import { parsePayload } from "./parsePayload";
 
 export class DataAnalysisJob implements Job {
   run(task: Task): Promise<string> {
     logger.info({ taskId: task.taskId }, "Running data analysis");
 
-    const { geoJson } = JSON.parse(task.payload) as { geoJson: Feature<Polygon> };
+    const { geoJson } = parsePayload<{ geoJson: Feature<Polygon> }>(task);
     const inputGeometry = geoJson;
 
     for (const countryFeature of countryMapping.features) {

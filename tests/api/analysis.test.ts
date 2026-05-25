@@ -2,13 +2,13 @@ import "reflect-metadata";
 import http from "http";
 import path from "path";
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
-import { setupExpressTestApp } from "./test/app";
-import { AppDataSource } from "./data-source";
-import { Workflow } from "./models/Workflow";
-import { Task } from "./models/Task";
-import { WorkflowStatus, WorkflowFactory } from "./workflows/WorkflowFactory";
-import { TaskStatus, TaskRunner } from "./workers/taskRunner";
-import { Result } from "./models/Result";
+import { setupExpressTestApp } from "../../src/test/app";
+import { AppDataSource } from "../../src/data-source";
+import { Workflow } from "../../src/models/Workflow";
+import { Task } from "../../src/models/Task";
+import { WorkflowStatus, WorkflowFactory } from "../../src/workflows/WorkflowFactory";
+import { TaskStatus, TaskRunner } from "../../src/workers/taskRunner";
+import { Result } from "../../src/models/Result";
 
 // Brazil polygon from the README example
 const VALID_GEO_JSON = {
@@ -91,7 +91,7 @@ describe("POST /analysis", () => {
 describe("TaskRunner", () => {
   it("runs all tasks and marks the workflow completed", async () => {
     const factory = new WorkflowFactory(AppDataSource);
-    const workflowYaml = path.join(__dirname, "workflows/example_workflow.yml");
+    const workflowYaml = path.join(__dirname, "../../src/workflows/example_workflow.yml");
 
     const workflow = await factory.createWorkflowFromYAML(
       workflowYaml,
