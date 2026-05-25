@@ -7,7 +7,7 @@ import {
   UpdateDateColumn
 } from "typeorm";
 import { Workflow } from "./Workflow";
-import { TaskStatus } from "../workers/taskRunner";
+import { TaskStatus } from "../types/TaskStatus";
 
 @Entity({ name: "tasks" })
 export class Task {

@@ -21,7 +21,7 @@ router.post("/", async (req, res) => {
   }
 
   const { clientId, geoJson } = parsed.data;
-  const workflowFile = path.join(__dirname, "../workflows/example_workflow.yml");
+  const workflowFile = path.join(__dirname, "../workflows/multi_task_workflow.yml");
 
   try {
     const workflow = await workflowFactory.createWorkflowFromYAML(

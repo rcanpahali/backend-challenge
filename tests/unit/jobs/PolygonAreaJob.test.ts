@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { PolygonAreaJob } from "../../../src/jobs/PolygonAreaJob";
 import { Task } from "../../../src/models/Task";
-import { TaskStatus } from "../../../src/workers/taskRunner";
+import { TaskStatus } from "../../../src/types/TaskStatus";
 
 function makeTask(payload: unknown): Task {
   return {

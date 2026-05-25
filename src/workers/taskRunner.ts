@@ -6,12 +6,7 @@ import { Workflow } from "../models/Workflow";
 import { Result } from "../models/Result";
 import logger from "../logger";
 
-export enum TaskStatus {
-  Queued = "queued",
-  InProgress = "in_progress",
-  Completed = "completed",
-  Failed = "failed"
-}
+import { TaskStatus } from "../types/TaskStatus";
 
 export class TaskRunner {
   constructor(private taskRepository: Repository<Task>) {}
@@ -27,6 +22,7 @@ export class TaskRunner {
     await this.taskRepository.save(task);
     const job = getJobForTaskType(task.taskType);
 
+    // todo: refactor following part
     try {
       logger.info({ taskId: task.taskId, taskType: task.taskType }, "Starting job");
       const resultRepository = this.taskRepository.manager.getRepository(Result);

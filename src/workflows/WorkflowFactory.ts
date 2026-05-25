@@ -2,9 +2,10 @@ import * as fs from "fs";
 import * as yaml from "js-yaml";
 import { z } from "zod";
 import { DataSource } from "typeorm";
+import logger from "../logger";
 import { Workflow } from "../models/Workflow";
 import { Task } from "../models/Task";
-import { TaskStatus } from "../workers/taskRunner";
+import { TaskStatus } from "../types/TaskStatus";
 
 export enum WorkflowStatus {
   Initial = "initial",
@@ -40,7 +41,13 @@ export class WorkflowFactory {
     payload: string
   ): Promise<Workflow> {
     const fileContent = fs.readFileSync(filePath, "utf8");
-    const workflowDef = WorkflowDefinitionSchema.parse(yaml.load(fileContent));
+    const parsed = WorkflowDefinitionSchema.safeParse(yaml.load(fileContent));
+    if (!parsed.success) {
+      logger.error({ err: parsed.error }, "Invalid workflow YAML definition");
+      throw new Error("Invalid workflow YAML definition");
+    }
+
+    const workflowDef = parsed.data;
     const workflowRepository = this.dataSource.getRepository(Workflow);
     const taskRepository = this.dataSource.getRepository(Task);
     const workflow = new Workflow();

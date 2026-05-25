@@ -7,7 +7,8 @@ import { AppDataSource } from "../../src/data-source";
 import { Workflow } from "../../src/models/Workflow";
 import { Task } from "../../src/models/Task";
 import { WorkflowStatus, WorkflowFactory } from "../../src/workflows/WorkflowFactory";
-import { TaskStatus, TaskRunner } from "../../src/workers/taskRunner";
+import { TaskRunner } from "../../src/workers/taskRunner";
+import { TaskStatus } from "../../src/types/TaskStatus";
 import { Result } from "../../src/models/Result";
 
 // Brazil polygon from the README example
@@ -82,7 +83,7 @@ describe("POST /analysis", () => {
 
     expect(workflow).not.toBeNull();
     expect(workflow!.status).toBe(WorkflowStatus.Initial);
-    // example_workflow.yml defines 2 steps: analysis + notification
+    // multi_task_workflow.yml defines 2 steps: analysis + notification
     expect(workflow!.tasks).toHaveLength(2);
     expect(workflow!.tasks.every(t => t.status === TaskStatus.Queued)).toBe(true);
   });
@@ -91,7 +92,7 @@ describe("POST /analysis", () => {
 describe("TaskRunner", () => {
   it("runs all tasks and marks the workflow completed", async () => {
     const factory = new WorkflowFactory(AppDataSource);
-    const workflowYaml = path.join(__dirname, "../../src/workflows/example_workflow.yml");
+    const workflowYaml = path.join(__dirname, "../../src/workflows/multi_task_workflow.yml");
 
     const workflow = await factory.createWorkflowFromYAML(
       workflowYaml,

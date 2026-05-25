@@ -6,8 +6,8 @@
     "dev": "nodemon --watch src --ext ts --exec ts-node src/index.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint src && prettier --check src && cspell \"src/**/*.ts\"",
-    "lint:fix": "eslint src --fix && prettier --write src && cspell \"src/**/*.ts\"",
+    "lint": "eslint src tests && prettier --check src tests && cspell \"src/**/*.ts\" \"tests/**/*.ts\"",
+    "lint:fix": "eslint src tests --fix && prettier --write src tests && cspell \"src/**/*.ts\" \"tests/**/*.ts\"",
     "test": "vitest run",
     "test:watch": "vitest",
     "version": "changeset version"
