@@ -30,6 +30,7 @@ router.post("/", async (req, res) => {
       JSON.stringify({ geoJson })
     );
 
+    // 202 Accepted — workflow is queued, not done yet
     res.status(202).json({
       workflowId: workflow.workflowId,
       message: "Workflow created and tasks queued from YAML definition."

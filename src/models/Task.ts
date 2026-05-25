@@ -42,6 +42,7 @@ export class Task {
   @Column({ nullable: true, type: "text" })
   dependencyTaskId?: string | null;
 
+  // a task can depend on another task in the same workflow
   @ManyToOne(() => Task, { nullable: true, eager: false })
   @JoinColumn({ name: "dependencyTaskId" })
   dependency?: Task | null;

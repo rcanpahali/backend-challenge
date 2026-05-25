@@ -34,6 +34,7 @@ export class Workflow {
   updatedAt!: Date;
 
   deriveStatus(): WorkflowStatus {
+    // no tasks yet means workflow just started, not that it's done
     if (!this.tasks?.length) {
       return WorkflowStatus.InProgress;
     }

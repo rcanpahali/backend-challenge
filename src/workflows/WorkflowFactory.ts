@@ -50,6 +50,7 @@ export class WorkflowFactory {
 
     const workflowDef = parsed.data;
 
+    // this prevents a step from waiting on one that runs after it — would deadlock the worker
     for (const step of workflowDef.steps) {
       const dependsOnLaterStep = step.dependsOn !== undefined && step.dependsOn >= step.stepNumber;
       if (dependsOnLaterStep) {
@@ -87,6 +88,7 @@ export class WorkflowFactory {
     return savedWorkflow;
   }
 
+  // Phase 2: wire dependencies — task IDs are only available after phase 1 saves them
   private async wireDependencies(
     steps: z.infer<typeof WorkflowStepSchema>[],
     savedTasks: Task[],

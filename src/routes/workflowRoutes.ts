@@ -38,6 +38,7 @@ router.get("/:id/results", async (req, res) => {
       return;
     }
 
+    // results are only available once the workflow is done — client should poll /status first
     if (workflow.status !== WorkflowStatus.Completed && workflow.status !== WorkflowStatus.Failed) {
       res.status(400).json({ message: "Workflow is not yet completed" });
       return;
