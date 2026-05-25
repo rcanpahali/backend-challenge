@@ -42,7 +42,7 @@ describe("PolygonAreaJob", () => {
     expect(result.areaSquareMeters).toBeGreaterThan(0);
   });
 
-  it("throws when geoJson is missing from the payload", () => {
+  it("throws when geoJson is missing", () => {
     const task = makeTask({});
     expect(() => job.run(task)).toThrow("Missing geometry in payload");
   });

@@ -11,9 +11,9 @@ import { TaskStatus } from "../../../src/types/TaskStatus";
 import { VALID_GEO_JSON } from "../../helpers/utils";
 
 describe("Workflow execution", () => {
-  it("runs all tasks and marks the workflow completed", async () => {
+  it("runs all tasks and completes the workflow", async () => {
     const factory = new WorkflowFactory(AppDataSource);
-    const workflowYaml = path.join(__dirname, "../../../src/workflows/multi_task_workflow.yml");
+    const workflowYaml = path.join(__dirname, "../../../src/workflows/report_workflow.yml");
 
     const workflow = await factory.createWorkflowFromYAML(
       workflowYaml,
@@ -28,7 +28,7 @@ describe("Workflow execution", () => {
       order: { stepNumber: "ASC" }
     });
 
-    expect(tasks).toHaveLength(2);
+    expect(tasks).toHaveLength(3);
 
     const runner = createTaskRunner(AppDataSource);
     for (const task of tasks) {
@@ -58,6 +58,6 @@ describe("Workflow execution", () => {
       : null;
     expect(finalResult).not.toBeNull();
     expect(finalResult!.workflowId).toBe(workflow.workflowId);
-    expect(finalResult!.tasks).toHaveLength(2);
+    expect(finalResult!.tasks).toHaveLength(3);
   });
 });

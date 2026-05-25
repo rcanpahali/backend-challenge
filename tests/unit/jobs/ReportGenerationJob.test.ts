@@ -95,7 +95,7 @@ describe("ReportGenerationJob", () => {
     expect(output.finalReport.completedAt).toBeTypeOf("string");
   });
 
-  it("returns null output for a preceding task with no result", async () => {
+  it("returns null output for a task with no result", async () => {
     const taskWithNoResult = makePrecedingTask(1, TaskStatus.Completed);
     const reportTask = makeTask({ stepNumber: 2 });
 

@@ -52,7 +52,7 @@ function makeTask(overrides: Partial<Task> = {}): Task {
 }
 
 describe("TaskRunner", () => {
-  it("marks the task as failed and stores the error message when the job throws", async () => {
+  it("marks the task failed when the job throws", async () => {
     const { taskRepo, resultRepo, workflowRepo, savedStatuses } = makeMocks();
     const runner = new TaskRunner(taskRepo, resultRepo, workflowRepo);
     const task = makeTask({ payload: "not-json" });
@@ -65,7 +65,7 @@ describe("TaskRunner", () => {
     expect(typeof task.errorMessage).toBe("string");
   });
 
-  it("enriches task payload with dependency output before running the job", async () => {
+  it("injects dependency output into the payload", async () => {
     const depResult: Result = {
       resultId: "dep-result-id",
       taskId: "dep-task-id",
@@ -94,7 +94,7 @@ describe("TaskRunner", () => {
     expect(parsed.dependencyOutput).toEqual({ country: "Brazil" });
   });
 
-  it("does not modify payload when the task has no dependency", async () => {
+  it("leaves payload unchanged when there is no dependency", async () => {
     vi.spyOn(JobFactory, "getJobForTaskType").mockReturnValue({
       run: vi.fn().mockResolvedValue({ done: true })
     });

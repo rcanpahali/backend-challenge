@@ -8,6 +8,10 @@ import { TaskStatus } from "../types/TaskStatus";
 export class WorkflowRepository implements IWorkflowRepository {
   constructor(private dataSource: DataSource) {}
 
+  findById(workflowId: string): Promise<Workflow | null> {
+    return this.dataSource.getRepository(Workflow).findOne({ where: { workflowId } });
+  }
+
   findWithTasks(workflowId: string): Promise<Workflow | null> {
     return this.dataSource.getRepository(Workflow).findOne({
       where: { workflowId },

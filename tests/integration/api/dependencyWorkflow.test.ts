@@ -9,7 +9,7 @@ import { TaskStatus } from "../../../src/types/TaskStatus";
 import { VALID_GEO_JSON, writeYaml, findEligibleQueuedTask } from "../../helpers/utils";
 
 describe("Dependency workflow", () => {
-  it("runs tasks in dependency order and passes output to dependent task", async () => {
+  it("runs tasks in dependency order", async () => {
     const yamlPath = writeYaml(`
       name: "integration_dep_workflow"
       steps:
@@ -53,7 +53,7 @@ describe("Dependency workflow", () => {
     expect(finalWorkflow!.status).toBe(WorkflowStatus.Completed);
   });
 
-  it("does not pick up a task with an incomplete dependency", async () => {
+  it("skips tasks with an unfinished dependency", async () => {
     const yamlPath = writeYaml(`
       name: "blocked_dep_workflow"
       steps:

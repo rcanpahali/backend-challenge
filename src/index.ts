@@ -4,6 +4,7 @@ import pinoHttp from "pino-http";
 import { config } from "./config";
 import logger from "./logger";
 import analysisRoutes from "./routes/analysisRoutes";
+import workflowRoutes from "./routes/workflowRoutes";
 import defaultRoute from "./routes/defaultRoute";
 import { taskWorker } from "./workers/taskWorker";
 import { AppDataSource } from "./data-source";
@@ -12,6 +13,7 @@ const app = express();
 app.use(express.json());
 app.use(pinoHttp({ logger }));
 app.use("/analysis", analysisRoutes);
+app.use("/workflow", workflowRoutes);
 app.use("/", defaultRoute);
 
 void AppDataSource.initialize()

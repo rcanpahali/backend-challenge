@@ -6,16 +6,16 @@ import { Task } from "../../../src/models/Task";
 import { writeYaml } from "../../helpers/utils";
 
 describe("WorkflowFactory", () => {
-  it("creates tasks with correct dependency links when dependsOn is set", async () => {
+  it("links tasks by dependency when dependsOn is set", async () => {
     const yamlPath = writeYaml(`
-name: "dep_workflow"
-steps:
-  - taskType: "analysis"
-    stepNumber: 1
-  - taskType: "notification"
-    stepNumber: 2
-    dependsOn: 1
-`);
+      name: "dep_workflow"
+      steps:
+        - taskType: "analysis"
+          stepNumber: 1
+        - taskType: "notification"
+          stepNumber: 2
+          dependsOn: 1
+      `);
     const factory = new WorkflowFactory(AppDataSource);
     const workflow = await factory.createWorkflowFromYAML(
       yamlPath,
@@ -36,15 +36,15 @@ steps:
     expect(tasks[1].dependency?.taskId).toBe(tasks[0].taskId);
   });
 
-  it("leaves dependency null when no dependsOn is specified", async () => {
+  it("leaves dependency null when dependsOn is not set", async () => {
     const yamlPath = writeYaml(`
-name: "no_dep_workflow"
-steps:
-  - taskType: "analysis"
-    stepNumber: 1
-  - taskType: "notification"
-    stepNumber: 2
-`);
+      name: "no_dep_workflow"
+      steps:
+        - taskType: "analysis"
+          stepNumber: 1
+        - taskType: "notification"
+          stepNumber: 2
+      `);
     const factory = new WorkflowFactory(AppDataSource);
     const workflow = await factory.createWorkflowFromYAML(
       yamlPath,
@@ -61,47 +61,49 @@ steps:
     expect(tasks.every(t => t.dependencyTaskId == null)).toBe(true);
   });
 
-  it("throws when a step depends on an equal stepNumber", async () => {
-    const yamlPath = writeYaml(`
-name: "self_dep_workflow"
-steps:
-  - taskType: "analysis"
-    stepNumber: 1
-    dependsOn: 1
-`);
+  it.each([
+    [
+      "self-reference",
+      "client-self-dep",
+      `
+      name: "self_dep_workflow"
+      steps:
+        - taskType: "analysis"
+          stepNumber: 1
+          dependsOn: 1
+      `
+    ],
+    [
+      "forward-reference",
+      "client-forward-dep",
+      `
+      name: "forward_dep_workflow"
+      steps:
+        - taskType: "analysis"
+          stepNumber: 1
+          dependsOn: 2
+        - taskType: "notification"
+          stepNumber: 2
+      `
+    ]
+  ])("throws for invalid dependsOn (%s)", async (_label, clientId, yaml) => {
     const factory = new WorkflowFactory(AppDataSource);
     await expect(
-      factory.createWorkflowFromYAML(yamlPath, "client-self-dep", JSON.stringify({}))
+      factory.createWorkflowFromYAML(writeYaml(yaml), clientId, JSON.stringify({}))
     ).rejects.toThrow("cannot depend on");
   });
 
-  it("throws when a step depends on a later stepNumber", async () => {
-    const yamlPath = writeYaml(`
-name: "forward_dep_workflow"
-steps:
-  - taskType: "analysis"
-    stepNumber: 1
-    dependsOn: 2
-  - taskType: "notification"
-    stepNumber: 2
-`);
-    const factory = new WorkflowFactory(AppDataSource);
-    await expect(
-      factory.createWorkflowFromYAML(yamlPath, "client-forward-dep", JSON.stringify({}))
-    ).rejects.toThrow("cannot depend on");
-  });
-
-  it("throws when dependsOn references a stepNumber that does not exist", async () => {
+  it("throws when dependsOn step does not exist", async () => {
     // Step 3 depends on step 2, but step 2 does not exist
     const yamlPath = writeYaml(`
-name: "unknown_dep_workflow"
-steps:
-  - taskType: "analysis"
-    stepNumber: 1
-  - taskType: "notification"
-    stepNumber: 3
-    dependsOn: 2
-`);
+      name: "unknown_dep_workflow"
+      steps:
+        - taskType: "analysis"
+          stepNumber: 1
+        - taskType: "notification"
+          stepNumber: 3
+          dependsOn: 2
+      `);
     const factory = new WorkflowFactory(AppDataSource);
     await expect(
       factory.createWorkflowFromYAML(yamlPath, "client-unknown-dep", JSON.stringify({}))

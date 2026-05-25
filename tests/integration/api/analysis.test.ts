@@ -23,7 +23,7 @@ describe("POST /analysis", () => {
     server.close();
   });
 
-  it("returns 202 with a workflowId on a valid payload", async () => {
+  it("returns 202 with a workflowId", async () => {
     const res = await fetch(`${baseUrl}/analysis`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -48,7 +48,7 @@ describe("POST /analysis", () => {
     expect(res.status).toBe(400);
   });
 
-  it("persists the workflow and tasks with the correct initial statuses", async () => {
+  it("persists workflow with all tasks queued", async () => {
     const res = await fetch(`${baseUrl}/analysis`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -66,8 +66,8 @@ describe("POST /analysis", () => {
 
     expect(workflow).not.toBeNull();
     expect(workflow!.status).toBe(WorkflowStatus.Initial);
-    // multi_task_workflow.yml defines 2 steps: analysis + notification
-    expect(workflow!.tasks).toHaveLength(2);
+    // report_workflow.yml defines 3 steps: analysis + notification + report
+    expect(workflow!.tasks).toHaveLength(3);
     expect(workflow!.tasks.every(t => t.status === TaskStatus.Queued)).toBe(true);
   });
 });
