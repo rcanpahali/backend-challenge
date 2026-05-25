@@ -42,7 +42,7 @@ export class TaskRunner {
 
       if (task.dependency && task.dependency.resultId) {
         const depResult = await this.resultRepository.findById(task.dependency.resultId);
-        if (depResult) {
+        if (depResult && depResult.data) {
           const parsed = JSON.parse(task.payload) as Record<string, unknown>;
           parsed.dependencyOutput = JSON.parse(depResult.data);
           task.payload = JSON.stringify(parsed);
